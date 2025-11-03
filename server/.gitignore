@@ -15,6 +15,8 @@ yarn.lock
 pnpm-lock.yaml
 bun.lock
 
+generated
+
 # TypeScript
 *.tsbuildinfo
 .cache
@@ -32,3 +34,5 @@ out
 .serverless
 .firebase
 .craco
+
+/src/generated/prisma

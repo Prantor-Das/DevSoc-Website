@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUBCOMMITTEE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name    String
+  email   String    @unique
+  image   String?
+  role    UserRole  @default(USER)
+  // banned  Boolean   @default(false)
+  // banExpires DateTime?
+
+  // canCreateNewsletter Boolean @default(false)
+  // canManageEvents     Boolean @default(false)
+
+  sessions Session[]
+  accounts Account[]
+  posts    Newsletter[]
+  eventsCreated Event[] @relation("CreatedEvents")
+  eventRegistrations EventRegistration[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expiresAt      DateTime
+  token          String   @unique
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Newsletter {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  title       String
+  contentMd   String
+  coverImage  String?
+  videoUrl    String?
+  published   Boolean  @default(false)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("newsletters")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  title       String
+  description String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime
+  bannerImage String?
+  isActive    Boolean  @default(true)
+
+  createdById String
+  createdBy   User @relation("CreatedEvents", fields: [createdById], references: [id], onDelete: Cascade)
+
+  dynamicForm EventForm?
+  registrations EventRegistration[]
+
+  @@map("events")
+}
+
+model EventForm {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventId String @unique
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  fields Json  
+  // JSON structure describing the form fields
+  // Example:
+  // [
+  //   { "name": "roll", "label": "Roll Number", "type": "text", "required": true },
+  //   { "name": "dept", "label": "Department", "type": "select", "options": ["CSE", "ECE"], "required": true }
+  // ]
+
+  @@map("event_forms")
+}
+
+
+model EventRegistration {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId  String
+  eventId String
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  formData Json  // JSON object with user responses to form fields
+
+  @@unique([userId, eventId]) // Prevent duplicate registrations
+  @@map("event_registrations")
+}
