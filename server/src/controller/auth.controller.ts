@@ -62,27 +62,42 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   // Create user and account in a transaction
   const user = await prisma.$transaction(async (tx) => {
-    const u = await tx.user.create({
+    const createUser = await tx.user.create({
       data: { name, email: email.toLowerCase(), image: image ?? null },
     });
     const passwordHash = await hashPassword(password);
     await tx.account.create({
       data: {
-        userId: u.id,
+        userId: createUser.id,
         providerId: "credentials",
-        accountId: u.id,
+        accountId: createUser.id,
         password: passwordHash,
       },
     });
-    return u;
+    return createUser;
   });
 
-  // Sync to Convex
-  syncUserToConvex(user);
+  // Sync to Convex (async, but don't block the response)
+  syncUserToConvex(user).catch((error) => {
+    console.error("Failed to sync user to Convex:", error);
+    // Don't throw - this is a background operation
+  });
 
   const access = signAccessToken(buildAuthPayload(user));
   const refresh = signRefreshToken(buildAuthPayload(user));
   const refreshExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const accessExp = new Date(Date.now() + 15 * 60 * 60 * 1000);
+
+  await prisma.account.updateMany({
+    where: { userId: user.id, providerId: "credentials" },
+    data: {
+      refreshToken: refresh,
+      refreshTokenExpiresAt: refreshExp,
+      accessToken: access,
+      accessTokenExpiresAt: accessExp,
+    },
+  });
+
   await createSession(
     user.id,
     refresh,
@@ -128,6 +143,18 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const access = signAccessToken(buildAuthPayload(user));
   const refresh = signRefreshToken(buildAuthPayload(user));
   const refreshExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const accessExp = new Date(Date.now() + 15 * 60 * 60 * 1000);
+
+    await prisma.account.updateMany({
+    where: { userId: user.id, providerId: "credentials" },
+    data: {
+      refreshToken: refresh,
+      refreshTokenExpiresAt: refreshExp,
+      accessToken: access,
+      accessTokenExpiresAt: accessExp,
+    },
+  });
+
   await createSession(
     user.id,
     refresh,
@@ -230,8 +257,11 @@ export const updateProfile = asyncHandler(
     if (parsed.data.image !== undefined) updateData.image = parsed.data.image;
 
     const updated = await updateUserProfile(req.auth.userId, updateData);
-    // sync name/image to Convex
-    syncUserToConvex(updated);
+    // sync name/image to Convex (async, but don't block the response)
+    syncUserToConvex(updated).catch((error) => {
+      console.error("Failed to sync user to Convex:", error);
+      // Don't throw - this is a background operation
+    });
 
     return res.status(OK).json(
       new ApiResponse(
@@ -273,18 +303,3 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     .status(OK)
     .json(new ApiResponse(OK, null, "User logged out successfully"));
 });
-
-// Google OAuth (Passport)
-// export const googleOAuth = asyncHandler(async (_req: Request, res: Response) => {
-//   // This handler is called after Passport success (see routes).
-//   // Here, req.user is the Prisma user (set in passport verify callback).
-//   // We’ll access it via res.locals.user (from a preceding middleware).
-//   const user = (res.locals as any).user as { id: string; role: "USER" | "ADMIN" | "SUBCOMMITTEE" };
-//   const access = signAccessToken(buildAuthPayload(user));
-//   const refresh = signRefreshToken(buildAuthPayload(user));
-//   const refreshExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-//   await createSession(user.id, refresh, refreshExp);
-
-//   setAuthCookies(res, access, refresh);
-//   return res.status(OK).json(new ApiResponse("Google OAuth successful", { userId: user.id }));
-// });

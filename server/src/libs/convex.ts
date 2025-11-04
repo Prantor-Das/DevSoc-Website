@@ -1,12 +1,12 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api.js";
+import { envKeys } from "../utils/envKeys.js";
 
-const convexUrl = process.env.CONVEX_URL;
+const convexUrl = envKeys.CONVEX_URL;
 if (!convexUrl) {
   throw new Error("CONVEX_URL environment variable is required");
 }
 
-// Type assertion after null check
 const CONVEX_URL: string = convexUrl;
 
 export const convex = new ConvexHttpClient(CONVEX_URL);
@@ -21,38 +21,19 @@ export async function syncUserToConvex(user: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const adminKey = process.env.CONVEX_ADMIN_KEY;
-  if (!adminKey) {
-    throw new Error("CONVEX_ADMIN_KEY environment variable is required");
-  }
-
+  const adminKey = envKeys.CONVEX_ADMIN_KEY;
   try {
-    // Use fetch directly to call the Convex action endpoint
-    const response = await fetch(`${CONVEX_URL}/api/actions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${adminKey}`,
-      },
-      body: JSON.stringify({
-        path: "userActions:upsert",
-        args: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          role: user.role,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt.toISOString(),
-        },
-      }),
+    // Use the Convex client to call the mutation
+    const result = await convex.mutation(api.userActions.upsert, {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      role: user.role,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
     return result;
   } catch (error) {
     console.error("Failed to sync user to Convex:", error);

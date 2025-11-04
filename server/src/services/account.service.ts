@@ -20,31 +20,3 @@ export async function findCredentialsByEmail(email: string) {
     include: { user: true },
   });
 }
-
-// export async function upsertOAuthAccount(
-//   userId: string,
-//   providerId: string,
-//   accountId: string,
-//   tokens: {
-//     accessToken?: string;
-//     refreshToken?: string;
-//     idToken?: string;
-//     scope?: string;
-//     accessTokenExpiresAt?: Date;
-//     refreshTokenExpiresAt?: Date;
-//   }
-// ) {
-
-//     const existing = await prisma.account.findFirst({
-//     where: { providerId, accountId },
-//   });
-//   if (existing) {
-//     return prisma.account.update({
-//       where: { id: existing.id },
-//       data: { userId, ...tokens },
-//     });
-//   }
-//   return prisma.account.create({
-//     data: { userId, providerId, accountId, ...tokens },
-//   });
-// }
