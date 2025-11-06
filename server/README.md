@@ -139,7 +139,7 @@ This automatically cleans up conflicting generated files before running Convex.
 
 If you get HTTP 404 errors when syncing to Convex:
 
-1. Make sure your `CONVEX_URL` in `.env` matches your deployment:
+1. Make sure your `CONVEX_DEPLOYMENT` in `.env` matches your deployment:
 
    ```bash
    npm run convex:deploy
@@ -164,12 +164,12 @@ npm run db:generate
 Required in `.env`:
 
 - `DATABASE_URL` - PostgreSQL connection string
-- `CONVEX_URL` - Your Convex deployment URL (get from `convex deploy`)
-- `CONVEX_ADMIN_KEY` - Convex admin key for server operations (optional for now)
+- `CONVEX_DEPLOYMENT` - Your Convex deployment URL (get from `convex deploy`)
+- `CONVEX_DEPLOY_KEY` - Convex admin key for server operations (optional for now)
 - `ACCESS_SECRET` - JWT access token secret
 - `REFRESH_SECRET` - JWT refresh token secret
 
-**Note**: Make sure your `CONVEX_URL` matches your actual deployment URL from `convex deploy`.
+**Note**: Make sure your `CONVEX_DEPLOYMENT` matches your actual deployment URL from `convex deploy`.
 
 ## Code Formatting
 

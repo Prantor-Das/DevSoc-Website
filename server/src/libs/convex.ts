@@ -2,14 +2,14 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api.js";
 import { envKeys } from "../utils/envKeys.js";
 
-const convexUrl = envKeys.CONVEX_URL;
+const convexUrl = envKeys.CONVEX_DEPLOYMENT;
 if (!convexUrl) {
-  throw new Error("CONVEX_URL environment variable is required");
+  throw new Error("CONVEX_DEPLOYMENT environment variable is required");
 }
 
-const CONVEX_URL: string = convexUrl;
+const CONVEX_DEPLOYMENT: string = convexUrl;
 
-export const convex = new ConvexHttpClient(CONVEX_URL);
+export const convex = new ConvexHttpClient(CONVEX_DEPLOYMENT);
 
 // Helper function to sync user data to Convex
 export async function syncUserToConvex(user: {
