@@ -43,3 +43,25 @@ export const upsert = mutation({
     }
   },
 });
+
+export const deleteUser = mutation({
+  args: {
+    externalId: v.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    // TODO: Add proper authentication mechanism
+    // For now, this mutation is open - consider adding auth for production
+
+    const users = ctx.db
+      .query("users")
+      .withIndex("by_externalId", (q: any) => q.eq("externalId", args.externalId));
+    const existing = await users.first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { status: "deleted" };
+    } else {
+      return { status: "not_found" };
+    }
+  },
+});

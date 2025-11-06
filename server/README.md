@@ -48,6 +48,81 @@ npm run dev:full
 - `npm run lint` - Check formatting and build (no fixes)
 - `npm run precommit` - Format, build, and setup Convex (recommended before commits)
 
+## API Endpoints
+
+### Authentication Routes (`/api/v1/auth`)
+
+**Public Routes:**
+
+- `POST /register` - User registration
+- `POST /login` - User login
+- `POST /refresh` - Refresh access token (requires valid refresh token)
+
+**Protected Routes:**
+
+- `GET /me` - Get user profile (requires auth)
+- `PATCH /update` - Update user profile (requires auth)
+- `DELETE /delete` - Delete user account (requires auth)
+- `POST /logout` - Logout user (enhanced security)
+
+### Newsletter Routes (`/api/v1/news`)
+
+**Public Routes:**
+
+- `GET /` - Get all newsletters (optional auth for enhanced data)
+- `GET /:id` - Get newsletter by ID (optional auth for enhanced data)
+
+**Protected Routes:**
+
+- `POST /` - Create newsletter (ADMIN/SUBCOMMITTEE only)
+- `PATCH /:id` - Update newsletter (ADMIN/SUBCOMMITTEE only)
+- `DELETE /:id` - Delete newsletter (ADMIN only)
+
+## Security Features
+
+### Authentication & Authorization
+
+**Enhanced Security Model:**
+
+- **Dual Token Requirement**: Both access and refresh tokens must be present for protected routes
+- **Session Validation**: Active session verification for enhanced security
+- **Role-Based Access Control**: Granular permissions (USER, ADMIN, SUBCOMMITTEE)
+- **Token Rotation**: Automatic token refresh with session rotation
+- **Secure Logout**: Invalidates all user sessions on logout
+
+**Route Protection Levels:**
+
+- **Public Routes**: No authentication required (`/register`, `/login`)
+- **Optional Auth**: Works with or without authentication (`GET /newsletters`)
+- **Protected Routes**: Requires both access and refresh tokens (`/me`, `/update`)
+- **Role-Based Routes**: Requires specific roles (`POST /newsletters` - ADMIN/SUBCOMMITTEE only)
+
+**Security Middleware:**
+
+- `verifyAuth`: Requires both access and refresh tokens
+- `optionalAuth`: Optional authentication for public routes
+- `requireRole(roles)`: Role-based access control
+- `validateSession`: Session validation middleware
+- `secureAuth`: Combined auth + session validation
+
+### API Security
+
+**Token Management:**
+
+- Access tokens expire in 15 minutes
+- Refresh tokens expire in 30 days
+- Automatic token rotation on refresh
+- Secure HTTP-only cookies
+
+**Error Codes:**
+
+- `MISSING_ACCESS_TOKEN`: Access token not provided
+- `MISSING_REFRESH_TOKEN`: Refresh token not provided
+- `INVALID_ACCESS_TOKEN`: Token is invalid or expired
+- `SESSION_INVALID`: Session validation failed
+- `AUTH_REQUIRED`: Authentication required for this action
+- `INSUFFICIENT_PRIVILEGES`: User lacks required permissions
+
 ## Troubleshooting
 
 ### Convex File Conflicts

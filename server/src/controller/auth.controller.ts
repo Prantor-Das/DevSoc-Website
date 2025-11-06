@@ -16,15 +16,11 @@ import {
   UpdateProfileSchema,
 } from "../validator/auth.validator.js";
 import {
-  createUser,
   findUserByEmail,
   findUserById,
   updateUserProfile,
 } from "../services/user.service.js";
-import {
-  createLocalAccount,
-  findCredentialsByEmail,
-} from "../services/account.service.js";
+import { findCredentialsByEmail } from "../services/account.service.js";
 import {
   createSession,
   invalidateSessionByToken,
@@ -38,7 +34,7 @@ import {
 } from "../libs/jwt.js";
 import { setAuthCookies, clearAuthCookies } from "../libs/cookie.js";
 import { prisma } from "../libs/db.js";
-import { syncUserToConvex } from "../libs/convex.js";
+import { syncUserToConvex, deleteUserFromConvex } from "../libs/convex.js";
 import { envKeys } from "../utils/envKeys.js";
 
 function buildAuthPayload(
@@ -148,7 +144,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const refreshExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const accessExp = new Date(Date.now() + 15 * 60 * 60 * 1000);
 
-    await prisma.account.updateMany({
+  await prisma.account.updateMany({
     where: { userId: user.id, providerId: "credentials" },
     data: {
       refreshToken: refresh,
@@ -183,28 +179,48 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
-export const refreshToken = asyncHandler(
+export const refreshAccessToken = asyncHandler(
   async (req: Request, res: Response) => {
-    const token = req.cookies?.refresh_token;
-    if (!token) throw new ApiError(UNAUTHORIZED, "Missing refresh token");
+    const refreshToken = req.cookies?.refresh_token;
+    const currentAccessToken = req.cookies?.access_token;
+
+    // Both tokens must be present for security
+    if (!refreshToken || !currentAccessToken) {
+      clearAuthCookies(res);
+      throw new ApiError(UNAUTHORIZED, "Unauthorized user");
+    }
 
     let payload;
     try {
-      payload = verifyRefreshToken(token);
+      payload = verifyRefreshToken(refreshToken);
     } catch {
-      throw new ApiError(UNAUTHORIZED, "Invalid refresh token");
+      // Clear cookies if refresh token is invalid
+      clearAuthCookies(res);
+      throw new ApiError(UNAUTHORIZED, "Unauthorized user");
     }
 
-    const session = await findValidSessionByRefreshToken(token);
-    if (!session || session.userId !== payload.sub)
-      throw new ApiError(UNAUTHORIZED, "Session invalid or expired");
+    const session = await findValidSessionByRefreshToken(refreshToken);
+    if (!session || session.userId !== payload.sub) {
+      // Clear cookies if session is invalid
+      clearAuthCookies(res);
+      throw new ApiError(UNAUTHORIZED, "Session expired");
+    }
 
-    const user = session.user;
+    // Additional security: verify the user still exists and is active
+    const user = await findUserById(session.userId);
+    if (!user) {
+      // Clear cookies and invalidate session if user doesn't exist
+      clearAuthCookies(res);
+      await invalidateSessionByToken(refreshToken);
+      throw new ApiError(UNAUTHORIZED, "Unauthorized user");
+    }
+
     const newAccess = signAccessToken(buildAuthPayload(user, session.id));
     const newRefresh = signRefreshToken(buildAuthPayload(user, session.id));
     const refreshExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const accessExp = new Date(Date.now() + 15 * 60 * 60 * 1000);
 
-    // rotate: delete old, create new
+    // Rotate tokens: delete old session, create new one
     await prisma.$transaction(async (tx) => {
       await tx.session.delete({ where: { id: session.id } });
       await tx.session.create({
@@ -216,10 +232,35 @@ export const refreshToken = asyncHandler(
           userAgent: req.get("User-Agent") || null,
         },
       });
+
+      // Update account tokens
+      await tx.account.updateMany({
+        where: { userId: user.id, providerId: "credentials" },
+        data: {
+          refreshToken: newRefresh,
+          refreshTokenExpiresAt: refreshExp,
+          accessToken: newAccess,
+          accessTokenExpiresAt: accessExp,
+        },
+      });
     });
 
     setAuthCookies(res, newAccess, newRefresh);
-    return res.status(OK).json(new ApiResponse(OK, null, "Token refreshed"));
+    return res.status(OK).json(
+      new ApiResponse(
+        OK,
+        {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+          },
+        },
+        "Access token refreshed successfully"
+      )
+    );
   }
 );
 
@@ -288,11 +329,24 @@ export const updateProfile = asyncHandler(
 export const deleteProfile = asyncHandler(
   async (req: Request, res: Response) => {
     if (!req.auth) throw new ApiError(UNAUTHORIZED, "Unauthorized");
+    
+    const userId = req.auth.userId;
+    
+    // Delete from Prisma database
     await prisma.$transaction(async (tx) => {
-      await tx.session.deleteMany({ where: { userId: req.auth!.userId } });
-      await tx.account.deleteMany({ where: { userId: req.auth!.userId } });
-      await tx.user.delete({ where: { id: req.auth!.userId } });
+      await tx.session.deleteMany({ where: { userId } });
+      await tx.account.deleteMany({ where: { userId } });
+      await tx.user.delete({ where: { id: userId } });
     });
+
+    // Delete from Convex database (async, but don't block the response)
+    deleteUserFromConvex(userId).catch((error) => {
+      if (envKeys.NODE_ENV === "development") {
+        console.error("Failed to delete user from Convex:", error);
+      }
+      // Don't throw - this is a background operation
+    });
+
     clearAuthCookies(res);
     return res
       .status(OK)
@@ -301,8 +355,31 @@ export const deleteProfile = asyncHandler(
 );
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const token = req.cookies?.refresh_token;
-  if (token) await invalidateSessionByToken(token);
+  const refreshToken = req.cookies?.refresh_token;
+
+  // Invalidate session if refresh token exists
+  if (refreshToken) {
+    await invalidateSessionByToken(refreshToken);
+  }
+
+  // If user is authenticated, invalidate all their sessions for security
+  if (req.auth?.userId) {
+    await prisma.session.deleteMany({
+      where: { userId: req.auth.userId },
+    });
+
+    // Clear stored tokens in account
+    await prisma.account.updateMany({
+      where: { userId: req.auth.userId, providerId: "credentials" },
+      data: {
+        refreshToken: null,
+        refreshTokenExpiresAt: null,
+        accessToken: null,
+        accessTokenExpiresAt: null,
+      },
+    });
+  }
+
   clearAuthCookies(res);
   return res
     .status(OK)

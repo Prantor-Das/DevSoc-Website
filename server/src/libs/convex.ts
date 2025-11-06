@@ -55,3 +55,19 @@ export async function getUserFromConvex(externalId: string) {
     throw error;
   }
 }
+
+// Helper function to delete user from Convex
+export async function deleteUserFromConvex(externalId: string) {
+  try {
+    const result = await convex.mutation(api.userActions.deleteUser, {
+      externalId,
+    });
+
+    return result;
+  } catch (error) {
+    if (envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING) {
+      console.error("Failed to delete user from Convex:", error);
+    }
+    throw error;
+  }
+}

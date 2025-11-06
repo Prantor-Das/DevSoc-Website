@@ -17,7 +17,7 @@ const envSchema = z.object({
   CONVEX_ADMIN_KEY: z.string().min(1, "CONVEX_ADMIN_KEY is required"),
   COOKIE_SECURE: z.string().min(1, "COOKIE_SECURE is required"),
   COOKIE_DOMAIN: z.string().optional(),
-  DISABLE_LOGGING: z.string().optional().default("false")
+  DISABLE_LOGGING: z.string().optional().default("false"),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

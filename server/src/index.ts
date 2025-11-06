@@ -6,6 +6,7 @@ import { envKeys } from "./utils/envKeys.js";
 import { errorHandler } from "./middleware/errorHandler.middleware.js";
 import authRouter from "./routes/auth.routes.js";
 import newsletterRouter from "./routes/newsletter.routes.js";
+import eventRouter from "./routes/event.routes.js";
 
 const app = express();
 app.use(cookieParser());
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 });
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/news", newsletterRouter);
+app.use("/api/v1/events", eventRouter);
 
 app.use(errorHandler);
 

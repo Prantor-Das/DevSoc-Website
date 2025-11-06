@@ -8,9 +8,9 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: 
+    log:
       envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING
-        ? ["error", "warn"] 
+        ? ["error", "warn"]
         : [], // No logging in production or when disabled
   });
 

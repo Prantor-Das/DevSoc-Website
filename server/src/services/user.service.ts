@@ -24,3 +24,7 @@ export async function updateUserProfile(
 ) {
   return prisma.user.update({ where: { id: userId }, data });
 }
+
+export async function deleteUser(userId: string) {
+  return prisma.user.delete({ where: { id: userId } });
+}
