@@ -33,10 +33,14 @@ app.use(errorHandler);
 async function start() {
   try {
     await prisma.$connect();
-    console.log("Database connected");
+    if (envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING) {
+      console.log("Database connected");
+    }
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      if (envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING) {
+        console.log(`Server running on port ${PORT}`);
+      }
     });
   } catch (err) {
     console.error("Database connection error:", err);

@@ -21,7 +21,6 @@ export async function syncUserToConvex(user: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const adminKey = envKeys.CONVEX_ADMIN_KEY;
   try {
     // Use the Convex client to call the mutation
     const result = await convex.mutation(api.userActions.upsert, {
@@ -36,7 +35,9 @@ export async function syncUserToConvex(user: {
 
     return result;
   } catch (error) {
-    console.error("Failed to sync user to Convex:", error);
+    if (envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING) {
+      console.error("Failed to sync user to Convex:", error);
+    }
     throw error;
   }
 }
@@ -48,7 +49,9 @@ export async function getUserFromConvex(externalId: string) {
       externalId,
     });
   } catch (error) {
-    console.error("Failed to get user from Convex:", error);
+    if (envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING) {
+      console.error("Failed to get user from Convex:", error);
+    }
     throw error;
   }
 }

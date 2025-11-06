@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { INTERNAL_SERVER_ERROR } from "../utils/http.js";
+import { envKeys } from "../utils/envKeys.js";
 
 /**
  * Global error handler middleware
@@ -25,7 +26,7 @@ export const errorHandler = (
   const apiError = error as ApiError;
 
   // Log error for debugging (in development)
-  if (process.env.NODE_ENV === "development") {
+  if (envKeys.NODE_ENV === "development") {
     console.error("Error:", {
       message: apiError.message,
       statusCode: apiError.statusCode,

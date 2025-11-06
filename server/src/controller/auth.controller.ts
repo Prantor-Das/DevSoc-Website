@@ -39,6 +39,7 @@ import {
 import { setAuthCookies, clearAuthCookies } from "../libs/cookie.js";
 import { prisma } from "../libs/db.js";
 import { syncUserToConvex } from "../libs/convex.js";
+import { envKeys } from "../utils/envKeys.js";
 
 function buildAuthPayload(
   u: { id: string; role: "USER" | "ADMIN" | "SUBCOMMITTEE" },
@@ -79,7 +80,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   // Sync to Convex (async, but don't block the response)
   syncUserToConvex(user).catch((error) => {
-    console.error("Failed to sync user to Convex:", error);
+    if (envKeys.NODE_ENV === "development") {
+      console.error("Failed to sync user to Convex:", error);
+    }
     // Don't throw - this is a background operation
   });
 
@@ -259,7 +262,9 @@ export const updateProfile = asyncHandler(
     const updated = await updateUserProfile(req.auth.userId, updateData);
     // sync name/image to Convex (async, but don't block the response)
     syncUserToConvex(updated).catch((error) => {
-      console.error("Failed to sync user to Convex:", error);
+      if (envKeys.NODE_ENV === "development") {
+        console.error("Failed to sync user to Convex:", error);
+      }
       // Don't throw - this is a background operation
     });
 

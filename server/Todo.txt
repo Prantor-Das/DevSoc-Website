@@ -1,3 +1,5 @@
 1 add cloudinary and passport
 2 complete end to end newsletter controller
 3 fix newsletter routing
+
+4 add redis, rate limit & throttle and cache mewsletter and events

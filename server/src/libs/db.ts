@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { envKeys } from "../utils/envKeys.js";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -7,10 +8,13 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ["query", "error", "warn"], // Optional logging
+    log: 
+      envKeys.NODE_ENV === "development" && !envKeys.DISABLE_LOGGING
+        ? ["error", "warn"] 
+        : [], // No logging in production or when disabled
   });
 
-if (process.env.NODE_ENV !== "production") {
+if (envKeys.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 

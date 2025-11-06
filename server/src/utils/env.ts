@@ -5,18 +5,19 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().optional(),
-  ACCESS_SECRET: z.string().nonempty("JWT_SECRET is required"),
-  REFRESH_SECRET: z.string().nonempty("JWT_SECRET is required"),
-  DATABASE_URL: z.string().nonempty("DATABASE_URL is required"),
+  ACCESS_SECRET: z.string().min(1, "ACCESS_SECRET is required"),
+  REFRESH_SECRET: z.string().min(1, "REFRESH_SECRET is required"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   CLIENT_URL: z
     .string()
-    .url("CLIENT_URL must be a valid URL")
-    .nonempty("CLIENT_URL is required"),
+    .min(1, "CLIENT_URL is required")
+    .url("CLIENT_URL must be a valid URL"),
   NODE_ENV: z.enum(["development", "production"]).default("development"),
-  CONVEX_URL: z.string().nonempty("CONVEX_URL is required"),
-  CONVEX_ADMIN_KEY: z.string().nonempty("CONVEX_ADMIN_KEY is required"),
-  COOKIE_SECURE: z.string().nonempty("COOKIE_SECURE is required"),
+  CONVEX_URL: z.string().min(1, "CONVEX_URL is required"),
+  CONVEX_ADMIN_KEY: z.string().min(1, "CONVEX_ADMIN_KEY is required"),
+  COOKIE_SECURE: z.string().min(1, "COOKIE_SECURE is required"),
   COOKIE_DOMAIN: z.string().optional(),
+  DISABLE_LOGGING: z.string().optional().default("false")
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {
