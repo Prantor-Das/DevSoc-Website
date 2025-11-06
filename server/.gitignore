@@ -49,3 +49,5 @@ convex/*.d.ts
 convex/*.js.map
 convex/*.d.ts.map
 convex/README.md
+
+DEPLOYMENT.md
