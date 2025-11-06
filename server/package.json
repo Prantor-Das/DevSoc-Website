@@ -22,7 +22,8 @@
     "format:src": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:convex": "prettier --write \"convex/**/*.{ts,js,json}\"",
     "lint": "npm run format:check && npm run build",
-    "precommit": "npm run format && npm run build && npm run convex:dev:once"
+    "precommit": "npm run format && npm run build && npm run convex:dev:once",
+    "deploy": "npm run convex:clean && convex deploy && npm run build && npm run start"
   },
   "keywords": [],
   "author": "",
